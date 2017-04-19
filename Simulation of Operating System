@@ -1,0 +1,419 @@
+/*Ashley Gittens
+Simulation of operating system
+Program that handles the basic data structures (i.e. the devices and their queues) in an operating system
+Language in C++
+*/
+#include <iostream>
+#include <string>
+#include <cstdlib>
+#include <queue>
+#include <fstream>
+using namespace std;
+
+struct PCB
+{
+       int     PID;
+       int memory;
+       int timeP;
+       int timeC;
+       PCB()
+        { timeP=0;
+         timeC=0;
+        }
+       string name;
+       int sizeF;
+       char readW;
+
+};
+
+int main()
+{
+   int x=1,leftOver,memory,numPrint,fileSizP,numDisks,timePast,numMem;
+   PCB pcb1;
+   queue<PCB> readyQ, CPU, printQ, diskQ, readyQ1, CPU2;
+   vector<queue<PCB> > print;
+   vector<queue<PCB> > disk;
+   cout<< "_______________________________"<< endl;
+   cout<< "Simulation of Operating System"<<endl;
+   cout<< "_______________________________"<<endl;
+   cout<< "SYS GEN...."<<endl;
+   //Define how many devices of each type (printers and disks) are in the system. There is only one CPU.
+   cout<< "How many printers in system?"<< " ";
+   cin>> numPrint;
+   cout<<endl;
+   cout<< "How many disks in system?"<<" ";
+   cin>>numDisks;
+   cout<<endl;
+   cout<< "How much memory does the system have? "<<" ";
+   cin>> numMem;
+
+   cout<<endl;
+   cout<< "TYPE 'A' for arrival of process, 't' for process termination, "<<endl;
+   cout<< "'p#' or 'd#' to request specific printer or disk,"<<endl;
+   cout<< "'P#' or 'D#'  for completion of task, 'S' for snapshot"<<endl;
+   cout<<endl;
+   cout<< "RUNNING SECTION....."<<endl;
+   string input;
+   //User Input to begin process
+    while (getline(cin, input)){
+        pcb1.PID=x;
+        //A indicates the arrival of a process.Create a PCB for this process, generate a PID (process ID), and enqueue the PCB into the Ready Queue
+        if(input=="A"){
+            //System asks how much memory this process will need.
+            cout<< "Arrival..How much memory? ";
+            cin>> memory;
+            //Checks there is enough memory for arriving process
+            if(memory> numMem || numMem <=0){
+            cout<< "Not enough memory for process!"<<endl;
+            }
+            else{
+             x++;
+             //Update memory available and process arrives. The waiting process is moved in the ready Q and the time that has past since the previous operation if recorded
+             numMem=numMem- memory;
+             //enqueue the PCB into the Ready Queue
+             readyQ.push(pcb1);
+             cout<< "How much time has past since previous event? ";
+             cin>> timePast;
+             while(!readyQ.empty()){
+                 readyQ.front().timeP= readyQ.front().timeP+timePast;
+                 readyQ1.push(readyQ.front());
+                 readyQ.pop();
+             }
+             while(!readyQ1.empty()){
+                readyQ.push(readyQ1.front());
+                 readyQ1.pop();
+             }
+
+            cout << "PID "<<readyQ.front().PID << " put in front ready queue, " <<  "PID "<< readyQ.back().PID<< " in back of ready queue"<< endl;
+            // If the CPU is not occupied, the first process in the Ready Queue should be passed to the CPU. 
+            if(CPU.empty()){
+                CPU.push(readyQ.front());
+                while(!CPU.empty()){
+                    CPU.front().timeC= CPU.front().timeC+timePast;
+                    CPU2.push(CPU.front());
+                    CPU.pop();
+                }
+                while(!CPU2.empty()){
+                 CPU.push(CPU2.front());
+                 CPU2.pop();
+                }
+                CPU.front().memory= memory;
+                cout << "PID " << CPU.front().PID <<" put in empty CPU.    ";
+                readyQ.pop();
+            }
+            cout << "Size of ready queue = " << readyQ.size() << endl;}
+        }
+        //Get First element in user input
+        char letterN = input[0];
+        //'t' to indicate process in CPU issued system call for process termination
+        if(letterN=='t'){
+                if(CPU.empty()){
+                    cout<< "CPU empty!! No process to terminate!!";
+                }
+                else{
+                        //Update the time the processes have used the CPU and been in the readyQ
+                        cout<< "How much time has past since previous event?";
+                        cin>> timePast;
+                        while(!readyQ.empty()){
+                            readyQ.front().timeP= readyQ.front().timeP+timePast;
+                            readyQ1.push(readyQ.front());
+                            readyQ.pop();
+                        }
+                        while(!readyQ1.empty()){
+                            readyQ.push(readyQ1.front());
+                            readyQ1.pop();
+                        }
+                        cout<< "PID "<<CPU.front().PID<< " in CPU terminated" <<endl;
+                        numMem= numMem+ CPU.front().memory;
+                `       CPU.pop();
+                        if(CPU.empty()){
+                            CPU.push(readyQ.front());
+                            while(!CPU.empty()){
+                                CPU.front().timeC= CPU.front().timeC+timePast;
+                                CPU2.push(CPU.front());
+                                CPU.pop();
+                            }
+                            while(!CPU2.empty()){
+                                CPU.push(CPU2.front());
+                                CPU2.pop();
+                            }
+                        cout << "PID " << CPU.front().PID << " put in empty CPU."<< endl;
+                        readyQ.pop();
+                        }
+                }
+        }   
+        //Get number in user input.Each non-CPU device has a "name" consisting of a letter and an integer.
+        char numLet= input[1];
+        int ia = numLet - '0';
+        string taskCom;
+        string fileNam;
+        
+        for(int i=0; i<numPrint; i++){
+         print.push_back(queue<PCB>());
+        }
+        for(int i=0; i<numDisks; i++){
+         disk.push_back(queue<PCB>());
+        }
+     
+        //Lower case letter for system call, Process currently in CPU request printer, Update the time past 
+        if(letterN =='p'){
+                cout<< "How much time has past since previous event?";
+                cin>> timePast;
+                while(!readyQ.empty()){
+                            readyQ.front().timeP= readyQ.front().timeP+timePast;
+                            readyQ1.push(readyQ.front());
+                            readyQ.pop();
+                }
+                while(!readyQ1.empty()){
+                            readyQ.push(readyQ1.front());
+                            readyQ1.pop();
+                }
+                while(!CPU.empty()){
+                            CPU.front().timeC= CPU.front().timeC+timePast;
+                            CPU2.push(CPU.front());
+                            CPU.pop();
+                }
+                while(!CPU2.empty()){
+                            CPU.push(CPU2.front());
+                            CPU2.pop();
+                }
+            //Prompt process for various parameters
+            cout<<"Printer Queue: system call.. ";
+            cout<< "Request printer "<< input << " by PID "<< CPU.front().PID<<endl;
+            cout<<"filename? ";
+            char RoW= 'w';
+            CPU.front().readW=RoW;
+            cin>> CPU.front().name;
+            ofstream infileD;
+            infileD.open( fileNam.c_str() );
+            infileD<< "Writing to this file"<<endl;
+            infileD.close();
+            cout<<"File size? ";
+            cin>> CPU.front().sizeF;
+            print[ia].push(CPU.front());
+            CPU.pop();
+            if(CPU.empty()){
+                CPU.push(readyQ.front());}
+
+            cout << "PID "<<print[ia].front().PID << " put in front of "<< input <<  " printer queue."<< endl;
+            cout<<"PID "<<print[ia].back().PID<< " in back of " << input << " printer queue."<<endl;
+
+    }
+    //Capital letter for interrupt,signal an interrupt indicating completion of the task at the head of its queue
+    if(letterN=='P'){
+            cout<< "How much time has past since previous event?";
+            cin>> timePast;
+            while(!readyQ.empty()){
+                            readyQ.front().timeP= readyQ.front().timeP+timePast;
+                            readyQ1.push(readyQ.front());
+                            readyQ.pop();
+             }
+            while(!readyQ1.empty()){
+                            readyQ.push(readyQ1.front());
+                            readyQ1.pop();
+             }
+            while(!CPU.empty()){
+                 CPU.front().timeC= CPU.front().timeC+timePast;
+                 CPU2.push(CPU.front());
+                 CPU.pop();
+            }
+            while(!CPU2.empty()){
+              CPU.push(CPU2.front());
+                 CPU2.pop();
+            }
+            cout<< "Task Completed in "<< input<< " .... PCB moved to ready queue.. ";
+            readyQ.push(print[ia].front());cout << "PID "<<readyQ.front().PID << " put in front ready queue,"<< " PID "<< readyQ.back().PID<< " in back of ready queue"<< endl;
+            print[ia].pop();
+            cout << print[ia].front().PID <<" left in " <<input<<" printer"<< endl;
+             cout<<"PID "<<readyQ.back().PID<< " now in back of ready queue."<<endl;
+        }
+    //Request disk 
+    if(letterN =='d'){
+            cout<< "How much time has past since previous event?";
+            cin>> timePast;
+            while(!readyQ.empty()){
+                            readyQ.front().timeP= readyQ.front().timeP+timePast;
+                            readyQ1.push(readyQ.front());
+                            readyQ.pop();
+             }
+            while(!readyQ1.empty()){
+                            readyQ.push(readyQ1.front());
+                            readyQ1.pop();
+             }
+             while(!CPU.empty()){
+                 CPU.front().timeC= CPU.front().timeC+timePast;
+                 CPU2.push(CPU.front());
+                 CPU.pop();
+            }
+            while(!CPU2.empty()){
+              CPU.push(CPU2.front());
+                 CPU2.pop();
+            }
+            cout<<"Disk Queue: system call... ";
+            cout<< "Request disk "<< input << " by PID "<< CPU.front().PID<<".." << "filename? "<< endl;
+            cin>> CPU.front().name;
+            char RoW;
+            string str;
+            //whether the requested action is a read or write
+            cout<< "read or write? ";
+             cin>> CPU.front().readW;
+             cout<<"File size?  ";
+            cin>> CPU.front().sizeF;
+            if(RoW=='r'){
+                ifstream newF;
+                newF.open(fileNam.c_str());
+                newF>>str;
+                 CPU.front().sizeF= 0;
+                newF.close();
+                }
+            else if(RoW=='w'){
+                ofstream infileD;
+                string fileDis;
+                int fileSizD;
+                cout<<"Write.....";
+                infileD.open( fileDis.c_str() );
+                infileD<< "Writing to this file.."<<endl;
+                infileD.close();
+            }
+            disk[ia].push(CPU.front());
+            CPU.pop();
+             if(CPU.empty()){
+                    CPU.push(readyQ.front());
+                    while(!CPU.empty()){
+                        CPU.front().timeC= CPU.front().timeC+timePast;
+                        CPU2.push(CPU.front());
+                        CPU.pop();
+                    }
+                    while(!CPU2.empty()){
+                        CPU.push(CPU2.front());
+                        CPU2.pop();
+                    }
+            }
+            cout << "PID "<<disk[ia].front().PID << " put in " <<input<<" disk"<< endl;
+            cout<<"PID "<<disk[ia].back().PID<< " in back of " <<input << " disk"<<endl;
+    }
+
+    //Signal disk completion
+    if(letterN=='D'){
+                    cout<< "How much time has past since previous event?";
+                    cin>> timePast;
+                        while(!readyQ.empty()){
+                            readyQ.front().timeP= readyQ.front().timeP+timePast;
+                            readyQ1.push(readyQ.front());
+                            readyQ.pop();
+                        }
+                        while(!readyQ1.empty()){
+                            readyQ.push(readyQ1.front());
+                            readyQ1.pop();
+                        }
+                        while(!CPU.empty()){
+                            CPU.front().timeC= CPU.front().timeC+timePast;
+                            CPU2.push(CPU.front());
+                            CPU.pop();
+                        }
+                        while(!CPU2.empty()){
+                            CPU.push(CPU2.front());
+                            CPU2.pop();
+                        }
+            cout<< "Task Completed in...... " << input<< ",  PCB moved to ready queue.. ";
+            readyQ.push(disk[ia].front());
+            disk[ia].pop();
+            cout << disk[ia].front().PID <<" left in " <<input<<" disk"<< endl;
+            cout<<"PID "<<readyQ.back().PID<< " now in back of ready queue."<<endl;
+        }
+        
+    //"Snapshot" interrupt
+    if(letterN=='S'){
+            //The handling routine should wait for the next keyboard input
+                        char assi;
+                        cout<< "How much time has past since previous event?";
+                        cin>> timePast;
+                        while(!readyQ.empty()){
+                            readyQ.front().timeP= readyQ.front().timeP+timePast;
+                            readyQ1.push(readyQ.front());
+                            readyQ.pop();
+                        }
+                        while(!readyQ1.empty()){
+                            readyQ.push(readyQ1.front());
+                            readyQ1.pop();
+                        }
+                        while(!CPU.empty()){
+                            CPU.front().timeC= CPU.front().timeC+timePast;
+                            CPU2.push(CPU.front());
+                            CPU.pop();
+                        }
+                        while(!CPU2.empty()){
+                            CPU.push(CPU2.front());
+                            CPU2.pop();
+                        }
+                        cout<<"type 'r' for processes in readyQ or type 'p' for print PID"<<endl;
+                        cout<<"or 'd' for disk PID or 'm' for processes in memory"<<endl;
+                        cin>>assi;
+                        //if "r", show the PIDs of the processes in the Ready Queue
+                        if(assi=='r'){
+                        cout<< "PIDs of processes in ready queue are ";
+                            while(!readyQ.empty()){
+                                cout<<" PID " << readyQ.front().PID<< ", Time spent in ready queue is "<< readyQ.front().timeP <<", ";
+                                readyQ.pop();
+                        }
+
+                        }
+                        //if "p", show the PIDs and printer specific information 
+                        if(assi=='p'){//filename and size, read or write
+                            for(int i=0; i<numPrint; ){
+                                while(!print[i].empty()){
+                                    cout<< "PrintQ:" << i << " has PID "<< print[i].front().PID<< " filename "<< print[i].front().name<< " and size " << print[i].front().sizeF<< " and type of operation is "<< print[i].front().readW<<endl;
+                                    print[i].pop();
+                            }
+                            i++;
+
+                        }
+                        }
+                        //if "d", show the PIDs and disk specific information
+                        if(assi=='d'){
+                            for(int i=0; i<numDisks; ){
+                                while(!disk[i].empty()){
+                                    cout<< "Disk Queue:" << i << " has PID "<< disk[i].front().PID<< " filename "<< disk[i].front().name<< " and size " << disk[i].front().sizeF<< " and type of operation is "<< disk[i].front().readW<<endl;
+                                    disk[i].pop();
+                            }
+                            i++;
+
+                        }
+                        }
+                        //show the current state of memory (show where each process is located in memory)
+                        if(assi=='m'){
+                            cout<< "Curr State of memory: "<<endl;
+                            while(!readyQ.empty()){
+                                cout<<" ready Q PID " << readyQ.front().PID<< ", Time spent in ready queue is "<< readyQ.front().timeP <<", ";
+                                readyQ.pop();
+                            }
+                            cout<<endl;
+                            for(int i=0; i<numPrint; ){
+                                while(!print[i].empty()){
+                                    cout<< "PrintQ:" << i << " has PID "<< print[i].front().PID<< ", filename "<< print[i].front().name<< " and size " << print[i].front().sizeF<< " and type of operation is "<< print[i].front().readW<<endl;
+                                    print[i].pop();
+                                }
+                            i++;
+
+                            }
+                            cout<< endl;
+                            for(int i=0; i<numDisks; ){
+                                while(!disk[i].empty()){
+                                    cout<< ",Disk Queue:" << i << " has PID "<< disk[i].front().PID<< " filename "<< disk[i].front().name<< " and size " << disk[i].front().sizeF<< " and type of operation is "<< disk[i].front().readW<<endl;
+                                    disk[i].pop();
+                                }
+                            i++;
+
+                            }   
+                            cout<<endl;
+                            while(!CPU.empty()){
+                                cout<<" ,CPU PID " << CPU.front().PID<< ", Time spent in CPU is "<< CPU.front().timeC <<", ";
+                                cout<< "Time spent in readyQ is "<< CPU.front().timeP << ", ";
+                                CPU.pop();
+                            }
+                        }
+        }
+        }
+    return 0;
+}
+
